@@ -1,4 +1,32 @@
 # Training the Networks
+
+```sh
+#Run Docker @HKPC
+docker start pytorch-netvlad
+docker exec -it pytorch-netvlad /bin/bash
+```
+
+## I - Cluster
+
+In order to initialise the NetVlad layer we need to first sample from the data and obtain `opt.num_clusters` centroids. This step is
+necessary for each configuration of the network and for each dataset. To cluster simply run
+
+python main.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
+
+with the correct values for any additional commandline arguments.
+
+## II - Train
+
+In order to initialise the NetVlad layer it is necessary to first run `main.py` with the correct settings and `--mode=cluster`. After which a model can be trained using (the following default flags):
+
+python main.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64
+
+The commandline args, the tensorboard data, and the model state will all be saved to `opt.runsPath`, which subsequently can be used for testing, or to resuming training.
+
+For more information on all commandline arguments run:
+
+    python main.py --help
+
 # pytorch-NetVlad
 
 Implementation of [NetVlad](https://arxiv.org/abs/1511.07247) in PyTorch, including code for training the model on the Pittsburgh dataset.
@@ -44,17 +72,7 @@ and the dataset specifications for the Pittsburgh dataset (available [here](http
 
 `main.py` contains the majority of the code, and has three different modes (`train`, `test`, `cluster`) which we'll discuss in mode detail below.
 
-## Train
 
-In order to initialise the NetVlad layer it is necessary to first run `main.py` with the correct settings and `--mode=cluster`. After which a model can be trained using (the following default flags):
-
-    python main.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64
-
-The commandline args, the tensorboard data, and the model state will all be saved to `opt.runsPath`, which subsequently can be used for testing, or to resuming training.
-
-For more information on all commandline arguments run:
-
-    python main.py --help
 
 ## Test
 
@@ -66,12 +84,3 @@ The commandline arguments for training were saved, so we shouldnt need to specif
 Additionally, to obtain the 'off the shelf' performance we can also omit the resume directory:
 
     python main.py --mode=test
-
-## Cluster
-
-In order to initialise the NetVlad layer we need to first sample from the data and obtain `opt.num_clusters` centroids. This step is
-necessary for each configuration of the network and for each dataset. To cluster simply run
-
-    python main.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
-
-with the correct values for any additional commandline arguments.

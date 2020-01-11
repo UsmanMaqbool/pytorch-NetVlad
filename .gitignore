@@ -1,1 +1,3 @@
 pytorch-NetVlad-old/
+__pycache__/
+data_runs/
