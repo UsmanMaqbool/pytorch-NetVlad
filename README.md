@@ -1,3 +1,4 @@
+# Training the Networks
 # pytorch-NetVlad
 
 Implementation of [NetVlad](https://arxiv.org/abs/1511.07247) in PyTorch, including code for training the model on the Pittsburgh dataset.
