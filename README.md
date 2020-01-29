@@ -4,15 +4,64 @@
 #Run Docker @HKPC
 docker start pytorch-netvlad
 docker exec -it pytorch-netvlad /bin/bash
+
+docker exec -it pytorch-netvlad-01 /bin/bash   # 0 and 1 GPU
+docker exec -it pytorch-netvlad-23 /bin/bash   # 2 and 3 GPU
+nvidia-docker run -it --name pytorch-netvlad -v /data_shared/Docker/usman:/app -p 8003:8888 -p 6003:6006 -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -v /tmp/.X11-unix/:/tmp/.X11-unix/ usmanmaqbool/faiss-gpu:pytorch-netvlad-py3-cuda8 /bin/bash
+
+
+#Run Docker @HK Server PC
+ssh -p 23333 usman@ee4e099.ece.ust.hk
+
+nvidia-docker run -it --name pytorch-netvlad -v /data_shared/Docker/usman:/app -p 8003:8888 -p 6003:6006 -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 --ipc=host -v /tmp/.X11-unix/:/tmp/.X11-unix/ usmanmaqbool/faiss-gpu:pytorch-netvlad-py3-cuda8 /bin/bash
+
+NV_GPU=0,1 nvidia-docker run -it --name pytorch-netvlad-01 -v /data_shared/Docker/usman:/app -p 8004:8888 -p 6004:6006 -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 --ipc=host -v /tmp/.X11-unix/:/tmp/.X11-unix/ usmanmaqbool/faiss-gpu:pytorch-netvlad-py3-cuda8 /bin/bash
+
+NV_GPU=2,3 nvidia-docker run -it --name pytorch-netvlad-23 -v /data_shared/Docker/usman:/app -p 8005:8888 -p 6005:6006 -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 --ipc=host -v /tmp/.X11-unix/:/tmp/.X11-unix/ usmanmaqbool/faiss-gpu:pytorch-netvlad-py3-cuda8 /bin/bash
 ```
+
+**SCP**
+```sh
+scp -P 23333 -r datasets/ usman@ee4e099.ece.ust.hk:/data_shared/Docker/usman/datasets/NetvLad/view-tags/pytorch-netvlad-run-1-e/
+scp -P 23333 -r pytorch-NetVlad/ usman@ee4e099.ece.ust.hk:/data_shared/Docker/usman/docker_ws/
+```
+**Tensorboard**
+```sh
+#LOGS SERVER TO HK PC
+scp -P 23333 -r usman@ee4e099.ece.ust.hk:/data_shared/Docker/usman/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-e/ view-tags/pytorch-netvlad-run-3-e/server/
+
+scp -P 23333 -r usman@ee4e099.ece.ust.hk:/data_shared/Docker/usman/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-e/Jan14_08-58-36_vgg16_netvlad view-tags/pytorch-netvlad-run-3-e/server/pytorch-netvlad-run-3-e/Jan14_08-58-36_vgg16_netvlad/
+
+tensorboard --logdir=server/pytorch-netvlad-run-3-e/Jan14_08-58-36_vgg16_netvlad/ 
+
+tensorboard --logdir=1-e:pytorch-netvlad-run-1-e/,3-e:pytorch-netvlad-run-3-e,3rgb:pytorch-netvlad-run-3-rgb,3-rgb-n:pytorch-netvlad-run-3-rgb-n/
+```
+
 
 ## I - Cluster
 
 In order to initialise the NetVlad layer we need to first sample from the data and obtain `opt.num_clusters` centroids. This step is
 necessary for each configuration of the network and for each dataset. To cluster simply run
+export TMPDIR=/app/datasets/NetvLad/view-tags/tmp/
+
 
 python main.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
 
+
+mkdir /app/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-e/tmp
+export TMPDIR=/app/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-e/tmp
+python main_3_e.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
+
+export TMPDIR=/app/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-rgb/tmp
+python main_3_rgb.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
+
+export TMPDIR=/app/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-rgb-n/tmp
+python main_3_rgb_n.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
+
+
+mkdir /app/datasets/NetvLad/view-tags/pytorch-netvlad-run-1-e/tmp
+export TMPDIR=/app/datasets/NetvLad/view-tags/pytorch-netvlad-run-1-e/tmp
+python main_1_e.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
 with the correct values for any additional commandline arguments.
 
 ## II - Train
@@ -20,12 +69,33 @@ with the correct values for any additional commandline arguments.
 In order to initialise the NetVlad layer it is necessary to first run `main.py` with the correct settings and `--mode=cluster`. After which a model can be trained using (the following default flags):
 
 python main.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64
+python main_3_e.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64 --nGPU=1 --nEpochs=5
+python main_3_rgb.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64 --nEpochs=5
+
+python main_3_rgb_n.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64 --nGPU=1 --nEpochs=5
+
+
+python main_1_e.py --mode=train --arch=vgg16 --pooling=netvlad --num_clusters=64 --nGPU=1 --nEpochs=5
 
 The commandline args, the tensorboard data, and the model state will all be saved to `opt.runsPath`, which subsequently can be used for testing, or to resuming training.
+
+```
+tensorboard --log
+dir=view-tags/pytorch-netvlad-run-3-e/Jan13_16-50-52_vgg16_netvlad/
+```
+
 
 For more information on all commandline arguments run:
 
     python main.py --help
+
+
+### III - Test
+
+```
+python main.py --mode=test --resume=/app/datasets/NetvLad/pytorch-netvlad-run/Jan12_13-22-35_vgg16_netvlad --split=test
+```
+
 
 # pytorch-NetVlad
 

@@ -44,8 +44,8 @@ parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SG
 parser.add_argument('--nocuda', action='store_true', help='Dont use cuda')
 parser.add_argument('--threads', type=int, default=8, help='Number of threads for each data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='Random seed to use.')
-parser.add_argument('--dataPath', type=str, default='/app/datasets/NetvLad/Pittsburgh/', help='Path for centroid data.')
-parser.add_argument('--runsPath', type=str, default='/app/datasets/NetvLad/pytorch-netvlad-run/', help='Path to save runs to.')
+parser.add_argument('--dataPath', type=str, default='/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_rgb/', help='Path for centroid data.')
+parser.add_argument('--runsPath', type=str, default='/app/datasets/NetvLad/view-tags/pytorch-netvlad-run-3-rgb/', help='Path to save runs to.')
 parser.add_argument('--savePath', type=str, default='checkpoints', 
         help='Path to save checkpoints to in logdir. Default=checkpoints/')
 parser.add_argument('--cachePath', type=str, default=environ['TMPDIR'], help='Path to save cache to.')

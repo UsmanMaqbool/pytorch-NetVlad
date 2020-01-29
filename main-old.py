@@ -10,7 +10,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler 
 from torch.utils.data.dataset import Subset
 import torchvision.transforms as transforms
 from PIL import Image
@@ -44,8 +45,8 @@ parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SG
 parser.add_argument('--nocuda', action='store_true', help='Dont use cuda')
 parser.add_argument('--threads', type=int, default=8, help='Number of threads for each data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='Random seed to use.')
-parser.add_argument('--dataPath', type=str, default='/app/datasets/NetvLad/Pittsburgh/', help='Path for centroid data.')
-parser.add_argument('--runsPath', type=str, default='/app/datasets/NetvLad/pytorch-netvlad-run/', help='Path to save runs to.')
+parser.add_argument('--dataPath', type=str, default='/app/datasets/NetvLad/Pittsburgh/data/', help='Path for centroid data.')
+parser.add_argument('--runsPath', type=str, default='/app/datasets/NetvLad/Pittsburgh/runs/', help='Path to save runs to.')
 parser.add_argument('--savePath', type=str, default='checkpoints', 
         help='Path to save checkpoints to in logdir. Default=checkpoints/')
 parser.add_argument('--cachePath', type=str, default=environ['TMPDIR'], help='Path to save cache to.')
@@ -327,8 +328,6 @@ if __name__ == "__main__":
     else:
         raise Exception('Unknown dataset')
 
-    cuda = not opt.nocuda
-    if cuda and not torch.cuda.is_available():
         raise Exception("No GPU found, please run with --nocuda")
 
     device = torch.device("cuda" if cuda else "cpu")
@@ -403,7 +402,7 @@ if __name__ == "__main__":
     encoder = nn.Sequential(*layers)
     model = nn.Module() 
     model.add_module('encoder', encoder)
-
+    
     if opt.mode.lower() != 'cluster':
         if opt.pooling.lower() == 'netvlad':
             net_vlad = netvlad.NetVLAD(num_clusters=opt.num_clusters, dim=encoder_dim, vladv2=False)

@@ -12,7 +12,12 @@ from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 import h5py
 
-root_dir = '/app/datasets/NetvLad/Pittsburgh/'
+#root_dir = '/app/datasets/NetvLad/Pittsburgh/'
+root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_e/'
+#root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_1_e/'
+#root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_rgb/'
+#root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_rgb_n/'
+
 if not exists(root_dir):
     raise FileNotFoundError('root_dir is hardcoded, please adjust to point to Pittsburth dataset')
 
@@ -22,8 +27,10 @@ queries_dir = join(root_dir, 'queries_real')
 def input_transform():
     return transforms.Compose([
         transforms.ToTensor(),
+       # transforms.Lambda(lambda img: img.repeat(3, 1, 1) ), #addedbyme for main_1_3.py
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                std=[0.229, 0.224, 0.225]),
+      #  transforms.Normalize([0.5], [0.5]),
     ])
 
 def get_whole_training_set(onlyDB=False):
