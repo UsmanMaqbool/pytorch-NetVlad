@@ -12,8 +12,8 @@ from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 import h5py
 
-#root_dir = '/app/datasets/NetvLad/Pittsburgh/'
-root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_e/'
+root_dir = '/app/datasets/NetvLad/Pittsburgh/'
+#root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_e/'
 #root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_1_e/'
 #root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_rgb/'
 #root_dir = '/app/datasets/NetvLad/view-tags/Pittsburgh_Viewtag_3_rgb_n/'

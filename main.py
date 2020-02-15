@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description='pytorch-NetVlad')
 parser.add_argument('--mode', type=str, default='train', help='Mode', choices=['train', 'test', 'cluster'])
 parser.add_argument('--batchSize', type=int, default=4, 
         help='Number of triplets (query, pos, negs). Each triplet consists of 12 images.')
-parser.add_argument('--cacheBatchSize', type=int, default=24, help='Batch size for caching and testing')
+parser.add_argument('--cacheBatchSize', type=int, default=8, help='Batch size for caching and testing')
 parser.add_argument('--cacheRefreshRate', type=int, default=1000, 
         help='How often to refresh cache, in number of queries. 0 for off')
 parser.add_argument('--nEpochs', type=int, default=30, help='number of epochs to train for')
@@ -252,8 +252,10 @@ def get_clusters(cluster_set):
 
             for iteration, (input, indices) in enumerate(data_loader, 1):
                 input = input.to(device)
+                print(input.size())
                 image_descriptors = model.encoder(input).view(input.size(0), encoder_dim, -1).permute(0, 2, 1)
-
+                print(image_descriptors.shape)
+                print(image_descriptors.size(1))
                 batchix = (iteration-1)*opt.cacheBatchSize*nPerImage
                 for ix in range(image_descriptors.size(0)):
                     # sample different location for each image in batch
