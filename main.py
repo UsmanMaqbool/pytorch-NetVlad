@@ -26,7 +26,7 @@ import netvlad
 
 parser = argparse.ArgumentParser(description='pytorch-NetVlad')
 parser.add_argument('--mode', type=str, default='train', help='Mode', choices=['train', 'test', 'cluster'])
-parser.add_argument('--batchSize', type=int, default=4, 
+parser.add_argument('--batchSize', type=int, default=1, 
         help='Number of triplets (query, pos, negs). Each triplet consists of 12 images.')
 parser.add_argument('--cacheBatchSize', type=int, default=8, help='Batch size for caching and testing')
 parser.add_argument('--cacheRefreshRate', type=int, default=1000, 
@@ -45,7 +45,7 @@ parser.add_argument('--nocuda', action='store_true', help='Dont use cuda')
 parser.add_argument('--threads', type=int, default=8, help='Number of threads for each data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='Random seed to use.')
 parser.add_argument('--dataPath', type=str, default='/app/datasets/NetvLad/Pittsburgh/', help='Path for centroid data.')
-parser.add_argument('--runsPath', type=str, default='/app/datasets/NetvLad/pytorch-netvlad-run/', help='Path to save runs to.')
+parser.add_argument('--runsPath', type=str, default='/app/datasets/NetvLad/leo-pytorch-netvlad/run/netvlad-modified-vgg', help='Path to save runs to.')
 parser.add_argument('--savePath', type=str, default='checkpoints', 
         help='Path to save checkpoints to in logdir. Default=checkpoints/')
 parser.add_argument('--cachePath', type=str, default=environ['TMPDIR'], help='Path to save cache to.')
@@ -66,6 +66,97 @@ parser.add_argument('--margin', type=float, default=0.1, help='Margin for triple
 parser.add_argument('--split', type=str, default='val', help='Data split to use for testing. Default is val', 
         choices=['test', 'test250k', 'train', 'val'])
 parser.add_argument('--fromscratch', action='store_true', help='Train from scratch rather than using pretrained models')
+
+
+class VGG(nn.Module):
+    
+    def __init__(self, features, num_classes=1000, init_weights=True):
+        super(VGG, self).__init__()
+        self.features = features
+        self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
+      
+        self.classifier = nn.Sequential(
+            nn.Linear(512 * 7 * 7, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, num_classes),
+            
+        )
+        if init_weights:
+            self._initialize_weights()
+
+    def forward(self, x):
+        
+        for ii,model in enumerate(self.features):
+            # print ("len feature" )
+            # print (len(self.features))
+            x = model(x)
+            if ii > 28:
+                break;    
+
+        return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+
+
+def make_layers(cfg, batch_norm=False):
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+            else:
+                layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = v
+    return nn.Sequential(*layers)
+
+
+cfgs = {
+    'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+}
+
+
+def _vgg(arch, cfg, batch_norm, pretrained, progress, **kwargs):
+    if pretrained:
+        kwargs['init_weights'] = False
+    model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
+    if pretrained:
+        checkpoint = 'https://download.pytorch.org/models/vgg16-397923af.pth'
+        #state_dict = load_state_dict_from_url(model_urls[arch],progress=progress)
+        #model.load_state_dict(state_dict)
+        model.load_state_dict(torch.hub.load_state_dict_from_url(checkpoint, progress=progress), strict=False)
+    return model
+
+
+def vgg16(pretrained=False, progress=True, **kwargs):
+    r"""VGG 16-layer model (configuration "D")
+    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _vgg('vgg16', 'D', False, pretrained, progress, **kwargs)
 
 def train(epoch):
     epoch_loss = 0
@@ -252,10 +343,8 @@ def get_clusters(cluster_set):
 
             for iteration, (input, indices) in enumerate(data_loader, 1):
                 input = input.to(device)
-                print(input.size())
                 image_descriptors = model.encoder(input).view(input.size(0), encoder_dim, -1).permute(0, 2, 1)
-                print(image_descriptors.shape)
-                print(image_descriptors.size(1))
+
                 batchix = (iteration-1)*opt.cacheBatchSize*nPerImage
                 for ix in range(image_descriptors.size(0)):
                     # sample different location for each image in batch
@@ -389,7 +478,7 @@ if __name__ == "__main__":
 
     elif opt.arch.lower() == 'vgg16':
         encoder_dim = 512
-        encoder = models.vgg16(pretrained=pretrained)
+        encoder = vgg16(pretrained=pretrained)
         # capture only feature part and remove last relu and maxpool
         layers = list(encoder.features.children())[:-2]
 
@@ -405,7 +494,7 @@ if __name__ == "__main__":
     encoder = nn.Sequential(*layers)
     model = nn.Module() 
     model.add_module('encoder', encoder)
-
+    
     if opt.mode.lower() != 'cluster':
         if opt.pooling.lower() == 'netvlad':
             net_vlad = netvlad.NetVLAD(num_clusters=opt.num_clusters, dim=encoder_dim, vladv2=False)
